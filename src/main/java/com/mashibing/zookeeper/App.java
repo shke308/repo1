@@ -78,7 +78,6 @@ public class App
                 });
 
         latch.await();
-
         ZooKeeper.States state = zk.getState();
         switch (state) {
             case CONNECTING:
@@ -100,7 +99,7 @@ public class App
         }
 
         // 同步阻塞的方式
-        String pathName = zk.create("/ooxx", "olddate".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        String pathName = zk.create("/xxoo", "olddate".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
 
         final Stat stat = new Stat();
         byte[] nodeData = zk.getData(pathName, new Watcher() {
@@ -109,7 +108,7 @@ public class App
                 System.out.println("getData watch：" + event.toString());
                 try {
                     // true default Watch 被重新注册 new zookeeper是的时候传递的watch
-                    zk.getData("/ooxx", true, stat);
+                    zk.getData(pathName, true, stat);
                 } catch (KeeperException e) {
                     e.printStackTrace();
                 } catch (InterruptedException e) {
@@ -123,7 +122,7 @@ public class App
 
         // 异步回调方式
         System.out.println("-----------------async start-----------------");
-        zk.getData("/ooxx", false, new AsyncCallback.DataCallback() {
+        zk.getData(pathName, false, new AsyncCallback.DataCallback() {
             @Override
             public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
                 System.out.println("-----------------async call back-----------------");
