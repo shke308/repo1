@@ -1,15 +1,11 @@
-package com.msb.zookeeper;
+package cn.msb.zookeeper_lock;
 
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
 import java.util.concurrent.CountDownLatch;
 
-/**
- * 这个DefaultWatch和path是没用关系的，只和session有关
- */
 public class DefaultWatch implements Watcher {
-
     private CountDownLatch latch;
 
     public void setLatch(CountDownLatch latch) {
@@ -18,8 +14,7 @@ public class DefaultWatch implements Watcher {
 
     @Override
     public void process(WatchedEvent event) {
-        Event.KeeperState state = event.getState();
-        switch (state) {
+        switch (event.getState()) {
             case Unknown:
                 break;
             case Disconnected:

@@ -1,7 +1,7 @@
 package com.msb.zookeeper;
 
 
-import cn.msb.zookeeper.WatchCallback;
+import com.msb.zookeeper.WatchCallback;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
