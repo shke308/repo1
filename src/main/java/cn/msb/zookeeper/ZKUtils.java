@@ -16,20 +16,11 @@ public class ZKUtils {
 
     static {
         Properties prop = new Properties();
-        InputStream is = ZKUtils.class.getClassLoader().getResourceAsStream("zkConf.properties");
-        try {
+        try(InputStream is = ZKUtils.class.getClassLoader().getResourceAsStream("zkConf.properties")) {
             prop.load(is);
             address = prop.getProperty("zkNodes") + "/";
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if(is != null) {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
@@ -39,9 +30,7 @@ public class ZKUtils {
             zk = new ZooKeeper(address, 3000, watch);
             watch.setLatch(latch);
             latch.await();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
         return zk;
