@@ -7,9 +7,9 @@ import java.util.concurrent.CountDownLatch;
 
 public class DefaultWatch implements Watcher {
 
-    private CountDownLatch latch;
+    private final CountDownLatch latch;
 
-    public void setLatch(CountDownLatch latch) {
+    public DefaultWatch(CountDownLatch latch) {
         this.latch = latch;
     }
 
@@ -17,24 +17,17 @@ public class DefaultWatch implements Watcher {
     public void process(WatchedEvent event) {
         switch (event.getState()) {
             case Unknown:
-                break;
-            case Disconnected:
-                break;
             case NoSyncConnected:
+            case Disconnected:
+            case AuthFailed:
+            case ConnectedReadOnly:
+            case SaslAuthenticated:
+            case Expired:
+            case Closed:
                 break;
             case SyncConnected:
-                System.out.println(event.toString());
+                System.out.println(event);
                 latch.countDown();
-                break;
-            case AuthFailed:
-                break;
-            case ConnectedReadOnly:
-                break;
-            case SaslAuthenticated:
-                break;
-            case Expired:
-                break;
-            case Closed:
                 break;
         }
     }

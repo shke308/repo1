@@ -9,15 +9,12 @@ import org.apache.zookeeper.data.Stat;
 import java.util.concurrent.CountDownLatch;
 
 public class WatchCallback implements Watcher, AsyncCallback.StatCallback, AsyncCallback.DataCallback {
-    private ZooKeeper zk;
-    private MyConf myConf;
-    private CountDownLatch latch = new CountDownLatch(1);
+    private final ZooKeeper zk;
+    private final MyConf myConf;
+    private CountDownLatch latch;
 
-    public void setZk(ZooKeeper zk) {
+    public WatchCallback(ZooKeeper zk, MyConf myConf) {
         this.zk = zk;
-    }
-
-    public void setMyConf(MyConf myConf) {
         this.myConf = myConf;
     }
 
@@ -31,7 +28,7 @@ public class WatchCallback implements Watcher, AsyncCallback.StatCallback, Async
     @Override
     public void processResult(int rc, String path, Object ctx, Stat stat) {
         if(stat != null) {
-            zk.getData("/AppConf", this, this, "ABC");
+            zk.getData(path, this, this, "ABC");
         }
     }
 
@@ -39,24 +36,17 @@ public class WatchCallback implements Watcher, AsyncCallback.StatCallback, Async
     public void process(WatchedEvent event) {
         switch (event.getType()) {
             case None:
+            case NodeChildrenChanged:
+            case DataWatchRemoved:
+            case ChildWatchRemoved:
+            case PersistentWatchRemoved:
                 break;
             case NodeCreated:
-                zk.getData("/AppConf", this, this, "ABC");
+            case NodeDataChanged:
+                zk.getData(event.getPath(), this, this, "ABC");
                 break;
             case NodeDeleted:
                 myConf.setConf("");
-                latch = new CountDownLatch(1);
-                break;
-            case NodeDataChanged:
-                zk.getData("/AppConf", this, this, "ABC");
-                break;
-            case NodeChildrenChanged:
-                break;
-            case DataWatchRemoved:
-                break;
-            case ChildWatchRemoved:
-                break;
-            case PersistentWatchRemoved:
                 break;
         }
     }
@@ -77,8 +67,9 @@ public class WatchCallback implements Watcher, AsyncCallback.StatCallback, Async
         }
     }
 
-    public void aWait() {
-        zk.exists("/AppConf", this, this, "ABC");
+    public void aWait(String path) {
+        latch = new CountDownLatch(1);
+        zk.exists(path, this, this, "ABC");
         try {
             latch.await();
         } catch (InterruptedException e) {

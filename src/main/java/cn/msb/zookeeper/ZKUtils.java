@@ -11,8 +11,8 @@ import java.util.concurrent.CountDownLatch;
 public class ZKUtils {
     private static ZooKeeper zk;
     private static String address;
-    private static DefaultWatch watch = new DefaultWatch();
-    private static CountDownLatch latch = new CountDownLatch(1);
+    private static final CountDownLatch latch = new CountDownLatch(1);
+    private static final DefaultWatch watch = new DefaultWatch(latch);
 
     static {
         Properties prop = new Properties();
@@ -28,7 +28,6 @@ public class ZKUtils {
         address += path;
         try {
             zk = new ZooKeeper(address, 3000, watch);
-            watch.setLatch(latch);
             latch.await();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();

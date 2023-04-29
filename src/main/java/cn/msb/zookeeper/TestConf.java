@@ -1,6 +1,7 @@
 package cn.msb.zookeeper;
 
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.common.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +16,7 @@ public class TestConf {
 
     @Before
     public void getConn() {
-        zk = ZKUtils.getZk("TestConf");
+        zk = ZKUtils.getZk("testConf");
     }
 
     @After
@@ -31,15 +32,13 @@ public class TestConf {
 
     @Test
     public void test() {
-        WatchCallback watch = new WatchCallback();
         MyConf conf = new MyConf();
-        watch.setZk(zk);
-        watch.setMyConf(conf);
-        watch.aWait();
+        WatchCallback watch = new WatchCallback(zk, conf);
+        watch.aWait("/AppConf");
         while(true) {
             if(conf.getConf().equals("")) {
                 System.out.println("配置丢了。。。");
-                watch.aWait();
+                watch.aWait("/AppConf");
             } else {
                 System.out.println(conf.getConf());
                 try {
@@ -51,5 +50,21 @@ public class TestConf {
         }
     }
 
+    @Test
+    public void getConf() throws InterruptedException {
+        MyConf myConf = new MyConf();
+        WatchCallback watchCallback = new WatchCallback(zk, myConf);
+
+        watchCallback.aWait("/AppConf");
+        while (true) {
+            if(StringUtils.isBlank(myConf.getConf())) {
+                System.out.println("配置丢了。。。");
+                watchCallback.aWait("/AppConf");
+            } else {
+                Thread.sleep(1000);
+                System.out.println(myConf.getConf());
+            }
+        }
+    }
 
 }
