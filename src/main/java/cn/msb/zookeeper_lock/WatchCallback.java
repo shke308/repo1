@@ -7,29 +7,29 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-public class WatchCallback implements AsyncCallback.StringCallback, AsyncCallback.Children2Callback, AsyncCallback.StatCallback, Watcher{
+public class WatchCallback implements Watcher, AsyncCallback.StringCallback, AsyncCallback.Children2Callback, AsyncCallback.StatCallback {
 
     private ZooKeeper zk;
-    private CountDownLatch latch = new CountDownLatch(1);
+
     private String threadName;
+
+    private CountDownLatch latch = new CountDownLatch(1);
+
     private String pathName;
 
-    public void setZk(ZooKeeper zk) {
+    public WatchCallback(ZooKeeper zk, String threadName) {
         this.zk = zk;
-    }
-
-    public void setThreadName(String threadName) {
         this.threadName = threadName;
     }
 
-    // 加锁
     public void tryLock() {
         try {
             zk.create("/lock",
                     threadName.getBytes(),
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
                     CreateMode.EPHEMERAL_SEQUENTIAL,
-                    this, "ABC");
+                    this,
+                    "abc");
             latch.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -39,84 +39,80 @@ public class WatchCallback implements AsyncCallback.StringCallback, AsyncCallbac
     public void unLock() {
         try {
             zk.delete(pathName, -1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (KeeperException e) {
+        } catch (InterruptedException | KeeperException e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * StringCallback 要重写的方法 ，执行完create()后，会回调该方法
-     * @param rc
-     * @param path
-     * @param ctx
-     * @param name
-     */
+    // Watch call back
     @Override
-    public void processResult(int rc, String path, Object ctx, String name) {
-        System.out.println(threadName + " create node " + name);
-        this.pathName = name;
-        zk.getChildren("/", false, this, "ABC");
+    public void process(WatchedEvent event) {
+        Event.EventType type = event.getType();
+        switch (type) {
+            case None:
+            case NodeCreated:
+            case NodeDataChanged:
+            case NodeChildrenChanged:
+            case DataWatchRemoved:
+            case ChildWatchRemoved:
+            case PersistentWatchRemoved:
+                break;
+            case NodeDeleted:
+                zk.getChildren("/", false, this, "anc");
+                break;
+        }
     }
 
-    /**
-     * Children2CallBack 要重写的方法，当执行完getChildren后，会回调该方法
-     * @param rc
-     * @param path
-     * @param ctx
-     * @param children
-     * @param stat
-     */
+
+    // String call back
+    @Override
+    public void processResult(int rc, String path, Object ctx, String name) {
+        if (name != null) {
+            System.out.println(threadName + ":" + name);
+            pathName = name;
+            zk.getChildren("/", false, this, "anc");
+        }
+    }
+
+    // getChildren call back
     @Override
     public void processResult(int rc, String path, Object ctx, List<String> children, Stat stat) {
+        // 一定能看到自己前面的节点
         Collections.sort(children);
         int index = children.indexOf(pathName.substring(1));
-        if(index == 0) {
-            System.out.println(threadName + " is first.");
+        // 是不是第一个
+        if (index == 0) {
+            // yes
+            System.out.println(threadName + ": i am first!");
             try {
+                // 这里的setData用于做可重入锁
                 zk.setData("/", threadName.getBytes(), -1);
-            } catch (KeeperException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+            } catch (KeeperException | InterruptedException e) {
                 e.printStackTrace();
             }
             latch.countDown();
         } else {
-            zk.exists("/" + children.get(index - 1), this, this, "ABC");
+            // no watch前一个节点
+            zk.exists("/" + children.get(index - 1), this, this, "asf");
         }
+
+//        System.out.println(threadName + ": look lock....");
+        /*for (String child : children) {
+            System.out.println(child);
+        }*/
     }
 
-    // StatCallback 需要重写方法，执行完 exists()方法后，会回调该方法
+    public String getPathName() {
+        return pathName;
+    }
+
+    public void setPathName(String pathName) {
+        this.pathName = pathName;
+    }
+
+    // stat call back
     @Override
     public void processResult(int rc, String path, Object ctx, Stat stat) {
-        // 偷懒了没写
-    }
-
-    /**
-     * Watcher需要重写的方法， 监听事件的发生，然后触发该方法
-     * @param event
-     */
-    @Override
-    public void process(WatchedEvent event) {
-        switch (event.getType()) {
-            case None:
-                break;
-            case NodeCreated:
-                break;
-            case NodeDeleted:
-                zk.getChildren("/", false, this, "ABC");
-                break;
-            case NodeDataChanged:
-                break;
-            case NodeChildrenChanged:
-                break;
-            case DataWatchRemoved:
-                break;
-            case ChildWatchRemoved:
-                break;
-            case PersistentWatchRemoved:
-                break;
-        }
+        // 偷懒
     }
 }

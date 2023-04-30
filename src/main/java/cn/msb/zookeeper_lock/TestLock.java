@@ -1,9 +1,12 @@
 package cn.msb.zookeeper_lock;
 
+import cn.msb.zookeeper.ZKUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
 
 public class TestLock {
 
@@ -11,12 +14,12 @@ public class TestLock {
 
     @Before
     public void getConn() {
-        zk = ZKUtils.getZk("TestLock");
+        zk = ZKUtils.getZk("testLock");
     }
 
     @After
     public void close() {
-        if(zk != null) {
+        if (zk != null) {
             try {
                 zk.close();
             } catch (InterruptedException e) {
@@ -26,20 +29,24 @@ public class TestLock {
     }
 
     @Test
-    public void test() {
+    public void testLock() {
         for (int i = 0; i < 10; i++) {
-            WatchCallback watchCallback = new WatchCallback();
             new Thread(() -> {
-                String threadName = Thread.currentThread().getName();
-                watchCallback.setZk(zk);
-                watchCallback.setThreadName(threadName);
-                // 争抢锁
-                watchCallback.tryLock();
+                String name = Thread.currentThread().getName();
+                WatchCallback watch = new WatchCallback(zk, name);
+                // 每一个线程
+                // 抢锁
+                watch.tryLock();
                 // 干活
-                System.out.println(threadName + " 抢到锁了，正在干活...");
+                System.out.println(name + ": " + "get lock，working。。。");
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 // 释放锁
-                watchCallback.unLock();
-            }).start();
+                watch.unLock();
+            }, "thread:" + i).start();
         }
 
         while (true) {}
